@@ -152,6 +152,24 @@
     .notes-btn { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: #fff; border: none; border-radius: 8px; padding: 7px 18px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.18s; }
     .notes-btn:hover { opacity: 0.85; }
 
+    /* ── Deadlines ── */
+    .deadlines-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; }
+    .deadline-add { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .dl-input { background: rgba(5,12,35,0.6); border: 1px solid rgba(59,130,246,0.15); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.18s; flex: 1; min-width: 140px; }
+    .dl-input:focus { border-color: rgba(59,130,246,0.4); }
+    .dl-date { flex: 0 0 auto; color-scheme: dark; }
+    .dl-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(5,12,35,0.5); border: 1px solid rgba(59,130,246,0.08); border-radius: 10px; margin-bottom: 8px; }
+    .dl-item.done { opacity: 0.5; }
+    .dl-item.done .dl-name { text-decoration: line-through; }
+    .dl-check { width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6; flex-shrink: 0; }
+    .dl-name { flex: 1; font-size: 13px; color: var(--text); }
+    .dl-days { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+    .dl-days.ok   { background: rgba(16,185,129,0.15); color: var(--green); }
+    .dl-days.warn { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .dl-days.over { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .dl-del { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; transition: color 0.18s; }
+    .dl-del:hover { color: var(--red); }
+
     /* ── Chart ── */
     .chart-wrap { margin-bottom: 16px; }
     .chart-title { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
@@ -342,6 +360,17 @@
     </div>
   </div>
 
+  <!-- Deadlines -->
+  <div class="section-title" style="margin-top:32px">Дедлайны</div>
+  <div class="deadlines-wrap">
+    <div class="deadline-add">
+      <input id="dl-text" class="dl-input" type="text" placeholder="Название задачи...">
+      <input id="dl-date" class="dl-input dl-date" type="date">
+      <button class="notes-btn" onclick="addDeadline()">+ Добавить</button>
+    </div>
+    <div id="dl-list"></div>
+  </div>
+
   <div class="section-title">Общая статистика</div>
   <div class="bottom-stats">
     <div class="stat-card">
@@ -419,6 +448,45 @@
   document.getElementById('apiKeyInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveKey();
   });
+
+  // ── Deadlines ──
+  let _deadlines = JSON.parse(localStorage.getItem('dashboard_deadlines') || '[]');
+
+  function saveDL() { localStorage.setItem('dashboard_deadlines', JSON.stringify(_deadlines)); }
+
+  function renderDL() {
+    const now = new Date(); now.setHours(0,0,0,0);
+    document.getElementById('dl-list').innerHTML = _deadlines.map((d, i) => {
+      const due  = new Date(d.date);
+      const diff = Math.round((due - now) / 86400000);
+      let cls = 'ok', label = `${diff}д`;
+      if (diff < 0)      { cls = 'over'; label = `просрочено`; }
+      else if (diff <= 3){ cls = 'warn'; label = `${diff}д`; }
+      return `<div class="dl-item${d.done ? ' done' : ''}">
+        <input type="checkbox" class="dl-check" ${d.done ? 'checked' : ''} onchange="toggleDL(${i})">
+        <span class="dl-name">${d.text}</span>
+        <span class="dl-days ${cls}">${d.date} · ${label}</span>
+        <button class="dl-del" onclick="deleteDL(${i})">×</button>
+      </div>`;
+    }).join('') || '<div style="font-size:13px;color:var(--text-3);text-align:center;padding:12px">Нет дедлайнов</div>';
+  }
+
+  function addDeadline() {
+    const text = document.getElementById('dl-text').value.trim();
+    const date = document.getElementById('dl-date').value;
+    if (!text || !date) return;
+    _deadlines.push({ text, date, done: false });
+    _deadlines.sort((a, b) => a.date.localeCompare(b.date));
+    saveDL(); renderDL();
+    document.getElementById('dl-text').value = '';
+    document.getElementById('dl-date').value = '';
+  }
+
+  function toggleDL(i) { _deadlines[i].done = !_deadlines[i].done; saveDL(); renderDL(); }
+  function deleteDL(i) { _deadlines.splice(i, 1); saveDL(); renderDL(); }
+
+  document.getElementById('dl-text').addEventListener('keydown', e => { if (e.key === 'Enter') addDeadline(); });
+  renderDL();
 
   // ── Notes ──
   const _notes = localStorage.getItem('dashboard_notes') || '';
