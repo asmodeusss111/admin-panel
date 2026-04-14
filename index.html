@@ -176,12 +176,6 @@
     .ql-del:hover { color: var(--red); }
     .ql-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 
-    /* ── Railway Status ── */
-    .railway-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; display: flex; align-items: center; gap: 14px; }
-    .railway-indicator { width: 14px; height: 14px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; animation: pulse 2s infinite; }
-    .railway-indicator.ok   { background: var(--green); }
-    .railway-indicator.warn { background: var(--yellow); }
-    .railway-indicator.bad  { background: var(--red); }
 
     /* ── Deadlines ── */
     .deadlines-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; }
@@ -399,16 +393,6 @@
     <div id="dl-list"></div>
   </div>
 
-  <!-- Railway Status -->
-  <div class="section-title" style="margin-top:32px">Статус Railway</div>
-  <div class="railway-wrap">
-    <div class="railway-indicator" id="railway-dot"></div>
-    <div>
-      <div id="railway-status" style="font-size:14px;font-weight:700;color:var(--text)">Загрузка...</div>
-      <div id="railway-desc" style="font-size:12px;color:var(--text-3);margin-top:2px"></div>
-    </div>
-    <a href="https://status.railway.app" target="_blank" style="margin-left:auto;font-size:12px;color:var(--text-3);text-decoration:none">status.railway.app →</a>
-  </div>
 
   <div class="section-title">Общая статистика</div>
   <div class="bottom-stats">
@@ -694,36 +678,6 @@
     a.click();
   }
 
-  // ── Railway Status ──
-  async function fetchRailwayStatus() {
-    const dot = document.getElementById('railway-dot');
-    const statusEl = document.getElementById('railway-status');
-    const descEl = document.getElementById('railway-desc');
-    try {
-      const r = await fetch(`${UPASS_URL}/api/railway-status`, { signal: AbortSignal.timeout(8000) });
-      const d = await r.json();
-      const indicator = d?.status?.indicator || 'unknown';
-      if (indicator === 'none') {
-        dot.className = 'railway-indicator ok';
-        statusEl.textContent = 'Все системы работают';
-        statusEl.style.color = 'var(--green)';
-      } else if (['minor', 'maintenance'].includes(indicator)) {
-        dot.className = 'railway-indicator warn';
-        statusEl.textContent = 'Частичные неполадки';
-        statusEl.style.color = 'var(--yellow)';
-      } else {
-        dot.className = 'railway-indicator bad';
-        statusEl.textContent = 'Серьёзные проблемы';
-        statusEl.style.color = 'var(--red)';
-      }
-      descEl.textContent = d?.status?.description || '';
-    } catch (e) {
-      console.error('[railway status]', e);
-      statusEl.textContent = 'Не удалось получить статус';
-      descEl.textContent = 'Проверьте вручную на status.railway.app';
-    }
-  }
-  fetchRailwayStatus();
 
   // ── Deadlines ──
   let _deadlines = JSON.parse(localStorage.getItem('dashboard_deadlines') || '[]');
