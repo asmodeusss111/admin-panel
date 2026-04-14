@@ -700,7 +700,7 @@
     const statusEl = document.getElementById('railway-status');
     const descEl = document.getElementById('railway-desc');
     try {
-      const r = await fetch('https://status.railway.app/api/v2/status.json', { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`${UPASS_URL}/api/railway-status`, { signal: AbortSignal.timeout(8000) });
       const d = await r.json();
       const indicator = d?.status?.indicator || 'unknown';
       if (indicator === 'none') {
