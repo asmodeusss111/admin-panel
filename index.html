@@ -260,6 +260,10 @@
         <div class="chart-title">Запросы за 7 дней</div>
         <canvas id="upass-chart" height="80"></canvas>
       </div>
+      <div class="chart-wrap" id="upass-domains-wrap" style="display:none">
+        <div class="chart-title">Топ доменов</div>
+        <div id="upass-domains"></div>
+      </div>
       <div class="card-links">
         <a href="https://upass.up.railway.app" target="_blank" class="link-btn primary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -468,6 +472,17 @@
       setVal('upass-blocked', d.blocked_ips);
       document.getElementById('upass-uptime').textContent = formatUptime(d.uptime);
       if (d.daily) drawChart('upass-chart', d.daily, '#3b82f6');
+      if (d.top_domains && d.top_domains.length) {
+        const max = d.top_domains[0][1];
+        document.getElementById('upass-domains').innerHTML = d.top_domains.map(([domain, cnt]) =>
+          `<div class="lang-row">
+            <div class="lang-name" style="width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${domain}">${domain}</div>
+            <div class="lang-bar-wrap"><div class="lang-bar" style="width:${Math.round(cnt/max*100)}%;background:linear-gradient(90deg,#3b82f6,#06b6d4)"></div></div>
+            <div class="lang-cnt">${cnt}</div>
+          </div>`
+        ).join('');
+        document.getElementById('upass-domains-wrap').style.display = '';
+      }
       document.getElementById('total-requests').textContent = d.total_requests;
       return true;
     } catch {
