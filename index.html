@@ -700,16 +700,14 @@
     const statusEl = document.getElementById('railway-status');
     const descEl = document.getElementById('railway-desc');
     try {
-      const r = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://status.railway.app/summary.json'), { signal: AbortSignal.timeout(12000) });
-      const wrapper = await r.json();
-      const d = JSON.parse(wrapper.contents);
-      const indicator = d?.page?.status || d?.status?.indicator || d?.indicator || 'unknown';
-      console.log('[railway status]', indicator, d);
-      if (['UP', 'none', 'OPERATIONAL'].includes(indicator)) {
+      const r = await fetch('https://status.railway.app/api/v2/status.json', { signal: AbortSignal.timeout(8000) });
+      const d = await r.json();
+      const indicator = d?.status?.indicator || 'unknown';
+      if (indicator === 'none') {
         dot.className = 'railway-indicator ok';
         statusEl.textContent = 'Все системы работают';
         statusEl.style.color = 'var(--green)';
-      } else if (['HASISSUES', 'minor', 'UNDERMAINTENANCE'].includes(indicator)) {
+      } else if (['minor', 'maintenance'].includes(indicator)) {
         dot.className = 'railway-indicator warn';
         statusEl.textContent = 'Частичные неполадки';
         statusEl.style.color = 'var(--yellow)';
@@ -718,7 +716,7 @@
         statusEl.textContent = 'Серьёзные проблемы';
         statusEl.style.color = 'var(--red)';
       }
-      descEl.textContent = d?.page?.description || d?.status?.description || '';
+      descEl.textContent = d?.status?.description || '';
     } catch (e) {
       console.error('[railway status]', e);
       statusEl.textContent = 'Не удалось получить статус';
