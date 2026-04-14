@@ -126,6 +126,7 @@
     .status.loading { background: rgba(245,158,11,0.1); color: var(--yellow);border: 1px solid rgba(245,158,11,0.25); }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── Stats grid inside card ── */
     .card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
@@ -165,6 +166,28 @@
     .term-cmd-input { flex: 1; background: none; border: none; color: #e2f0ff; font-family: 'Courier New', monospace; font-size: 13px; outline: none; }
     .term-logout { background: none; border: 1px solid rgba(239,68,68,0.3); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 11px; font-family: inherit; cursor: pointer; transition: all 0.18s; }
     .term-logout:hover { background: rgba(239,68,68,0.1); }
+
+    /* ── CVE Scanner ── */
+    .cve-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; }
+    .cve-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .cve-title { font-size: 13px; font-weight: 700; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
+    .cve-btns { display: flex; gap: 8px; }
+    .cve-scan-btn { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.18s; display: flex; align-items: center; gap: 6px; }
+    .cve-scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cve-scan-btn:not(:disabled):hover { opacity: 0.85; }
+    .cve-results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .cve-results { grid-template-columns: 1fr; } }
+    .cve-card { background: rgba(5,12,35,0.6); border: 1px solid rgba(59,130,246,0.15); border-radius: 12px; overflow: hidden; }
+    .cve-card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid rgba(59,130,246,0.1); }
+    .cve-card-name { font-size: 12px; font-weight: 700; color: var(--text-2); }
+    .cve-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; }
+    .cve-badge.safe { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+    .cve-badge.warn { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .cve-badge.loading { background: rgba(59,130,246,0.15); color: #7dd3fc; border: 1px solid rgba(59,130,246,0.25); }
+    .cve-badge.error { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+    .cve-output { font-family: 'Courier New', monospace; font-size: 11px; color: #93c5fd; padding: 12px 14px; min-height: 60px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+    .cve-idle { color: var(--text-3); font-style: italic; font-family: inherit; font-size: 12px; }
+    .cve-notice { font-size: 11px; color: var(--text-3); margin-top: 12px; text-align: center; }
 
     /* ── Quick Links ── */
     .quicklinks-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; }
@@ -451,6 +474,46 @@
     </div>
   </div>
 
+  <!-- CVE Scanner -->
+  <div class="section-title" style="margin-top:32px">CVE Сканер</div>
+  <div class="cve-wrap">
+    <div class="cve-header">
+      <div class="cve-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Сканирование зависимостей на уязвимости
+      </div>
+      <div class="cve-btns">
+        <button class="cve-scan-btn" id="cve-scan-btn" onclick="cveRunScan()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+          </svg>
+          Сканировать оба проекта
+        </button>
+      </div>
+    </div>
+    <div class="cve-results">
+      <div class="cve-card">
+        <div class="cve-card-header">
+          <span class="cve-card-name">uPass (Python)</span>
+          <span class="cve-badge loading" id="cve-upass-badge">Не сканировался</span>
+        </div>
+        <div class="cve-output" id="cve-upass-out"><span class="cve-idle">Нажми «Сканировать» для запуска pip-audit</span></div>
+      </div>
+      <div class="cve-card">
+        <div class="cve-card-header">
+          <span class="cve-card-name">PurpleC (Node.js)</span>
+          <span class="cve-badge loading" id="cve-purplec-badge">Не сканировался</span>
+        </div>
+        <div class="cve-output" id="cve-purplec-out"><span class="cve-idle">Нажми «Сканировать» для запуска npm audit</span></div>
+      </div>
+    </div>
+    <div class="cve-notice">⚠ Требует авторизации в терминале для каждого проекта</div>
+  </div>
+
   <!-- Quick Links -->
   <div class="section-title" style="margin-top:32px">Быстрые ссылки</div>
   <div class="quicklinks-wrap">
@@ -609,6 +672,61 @@
   document.getElementById('term-cmd').addEventListener('keydown', e => { if (e.key === 'Enter') termExec(); });
   document.getElementById('term-totp').addEventListener('keydown', e => { if (e.key === 'Enter') termAuth(); });
   showTermAuth();
+
+  // ── CVE Scanner ──
+  async function cveScanProject(proj) {
+    const base   = proj === 'upass' ? UPASS_URL : PURPLEC_URL;
+    const token  = _termToken[proj];
+    const outEl  = document.getElementById(`cve-${proj}-out`);
+    const badge  = document.getElementById(`cve-${proj}-badge`);
+    const cmd    = 'audit';
+
+    if (!token) {
+      outEl.textContent = '⚠ Сначала авторизуйся в терминале (' + (proj === 'upass' ? 'uPass' : 'PurpleC') + ')';
+      badge.className = 'cve-badge error';
+      badge.textContent = 'Нет сессии';
+      return;
+    }
+
+    badge.className = 'cve-badge loading';
+    badge.textContent = 'Сканирование…';
+    outEl.textContent = 'Запуск ' + (proj === 'upass' ? 'pip-audit' : 'npm audit') + '…';
+
+    try {
+      const r = await fetch(`${base}/api/terminal/exec`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Terminal-Token': token },
+        body: JSON.stringify({ cmd }),
+        signal: AbortSignal.timeout(70000),
+      });
+      if (r.status === 401) {
+        _termToken[proj] = null;
+        badge.className = 'cve-badge error'; badge.textContent = 'Сессия истекла';
+        outEl.textContent = '⚠ Сессия истекла — войди в терминал снова';
+        return;
+      }
+      const d = await r.json();
+      const text = d.output || d.error || '(нет ответа)';
+      outEl.textContent = text;
+
+      const isOk = text.startsWith('✓');
+      const isWarn = text.startsWith('⚠');
+      badge.className = 'cve-badge ' + (isOk ? 'safe' : isWarn ? 'warn' : 'error');
+      badge.textContent = isOk ? 'Чисто' : isWarn ? 'Уязвимости!' : 'Ошибка';
+    } catch (e) {
+      outEl.textContent = 'Сетевая ошибка: ' + e.message;
+      badge.className = 'cve-badge error'; badge.textContent = 'Ошибка';
+    }
+  }
+
+  async function cveRunScan() {
+    const btn = document.getElementById('cve-scan-btn');
+    btn.disabled = true;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Сканирование…`;
+    await Promise.all([cveScanProject('upass'), cveScanProject('purplec')]);
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Сканировать оба проекта`;
+  }
 
   // ── Quick Links ──
   const QL_DEFAULT = [
