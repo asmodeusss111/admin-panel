@@ -143,6 +143,15 @@
     .mini-stat-val.danger { background: none; -webkit-text-fill-color: var(--red); }
     .mini-stat-label { font-size: 11px; color: var(--text-3); font-weight: 500; }
 
+    /* ── Notes ── */
+    .notes-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; }
+    .notes-textarea { width: 100%; background: rgba(5,12,35,0.6); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 14px; color: var(--text); font-size: 13px; font-family: inherit; resize: vertical; min-height: 90px; outline: none; transition: border-color 0.18s; }
+    .notes-textarea:focus { border-color: rgba(59,130,246,0.4); }
+    .notes-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    .notes-saved { font-size: 11px; color: var(--text-3); }
+    .notes-btn { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: #fff; border: none; border-radius: 8px; padding: 7px 18px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.18s; }
+    .notes-btn:hover { opacity: 0.85; }
+
     /* ── Chart ── */
     .chart-wrap { margin-bottom: 16px; }
     .chart-title { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
@@ -323,6 +332,16 @@
 
   </div>
 
+  <!-- Notes -->
+  <div class="section-title" style="margin-top:32px">Заметки</div>
+  <div class="notes-wrap">
+    <textarea id="notes-input" class="notes-textarea" placeholder="Напиши заметку для себя..."></textarea>
+    <div class="notes-footer">
+      <span id="notes-saved" class="notes-saved"></span>
+      <button class="notes-btn" onclick="saveNotes()">Сохранить</button>
+    </div>
+  </div>
+
   <div class="section-title">Общая статистика</div>
   <div class="bottom-stats">
     <div class="stat-card">
@@ -399,6 +418,19 @@
   // Enter key in input
   document.getElementById('apiKeyInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveKey();
+  });
+
+  // ── Notes ──
+  const _notes = localStorage.getItem('dashboard_notes') || '';
+  document.getElementById('notes-input').value = _notes;
+  function saveNotes() {
+    localStorage.setItem('dashboard_notes', document.getElementById('notes-input').value);
+    const el = document.getElementById('notes-saved');
+    el.textContent = 'Сохранено ' + new Date().toLocaleTimeString('ru-RU');
+    setTimeout(() => el.textContent = '', 3000);
+  }
+  document.getElementById('notes-input').addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveNotes(); }
   });
 
   // ── Uptime formatter ──
