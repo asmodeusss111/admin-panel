@@ -241,6 +241,10 @@
           <div class="mini-stat-val" id="upass-blocked">—</div>
           <div class="mini-stat-label">Заблокировано IP</div>
         </div>
+        <div class="mini-stat" style="grid-column: span 2">
+          <div class="mini-stat-val" id="upass-uptime">—</div>
+          <div class="mini-stat-label">Uptime сервера</div>
+        </div>
       </div>
       <div class="card-links">
         <a href="https://upass.up.railway.app" target="_blank" class="link-btn primary">
@@ -276,7 +280,7 @@
         </div>
         <div class="mini-stat">
           <div class="mini-stat-val" id="purplec-uptime">—</div>
-          <div class="mini-stat-label">Статус</div>
+          <div class="mini-stat-label">Uptime сервера</div>
         </div>
       </div>
       <div class="card-links">
@@ -371,6 +375,17 @@
     if (e.key === 'Enter') saveKey();
   });
 
+  // ── Uptime formatter ──
+  function formatUptime(sec) {
+    if (!sec && sec !== 0) return '—';
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (d > 0) return `${d}д ${h}ч ${m}м`;
+    if (h > 0) return `${h}ч ${m}м`;
+    return `${m}м`;
+  }
+
   // ── Status helpers ──
   function setStatus(id, online) {
     const el = document.getElementById(id);
@@ -400,6 +415,7 @@
       setVal('upass-det',     d.deterministic);
       setVal('upass-failed',  d.failed_logins_hour, 5);
       setVal('upass-blocked', d.blocked_ips);
+      document.getElementById('upass-uptime').textContent = formatUptime(d.uptime);
       document.getElementById('total-requests').textContent = d.total_requests;
       return true;
     } catch {
@@ -421,7 +437,7 @@
       setVal('purplec-users',        d.total_users);
       setVal('purplec-compilations', d.total_compilations);
       setVal('purplec-admins',       d.admin_count);
-      document.getElementById('purplec-uptime').textContent = '✓';
+      document.getElementById('purplec-uptime').textContent = formatUptime(d.uptime);
       document.getElementById('total-users').textContent = d.total_users;
       return true;
     } catch {
