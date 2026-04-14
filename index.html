@@ -351,6 +351,10 @@
     location.reload();
   }
 
+  // Pre-fill saved admin path
+  const _savedPath = localStorage.getItem('purplec_admin_path') || '';
+  if (_savedPath) document.getElementById('adminPathInput').value = _savedPath;
+
   // Show setup if no key
   if (getKey()) {
     document.getElementById('setupOverlay').style.display = 'none';
