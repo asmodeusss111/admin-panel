@@ -206,7 +206,7 @@
     .link-btn svg { flex-shrink: 0; }
 
     /* ── Bottom stats ── */
-    .bottom-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .bottom-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
     .stat-card {
       background: var(--card-bg); border: 1px solid var(--border);
       border-radius: 12px; padding: 20px; backdrop-filter: blur(16px); text-align: center;
@@ -406,6 +406,10 @@
     <div class="stat-card">
       <div class="stat-value" id="online-count">0</div>
       <div class="stat-label">Онлайн сейчас</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="total-lines">—</div>
+      <div class="stat-label">Строк кода в сниппетах</div>
     </div>
   </div>
 
@@ -669,6 +673,7 @@
         document.getElementById('purplec-langs-wrap').style.display = '';
       }
       document.getElementById('total-users').textContent = d.total_users;
+      if (d.snippet_lines !== undefined) document.getElementById('total-lines').textContent = d.snippet_lines.toLocaleString('ru-RU');
       return true;
     } catch {
       setStatus('purplec-status', false);
