@@ -146,6 +146,11 @@
     /* ── Chart ── */
     .chart-wrap { margin-bottom: 16px; }
     .chart-title { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+    .lang-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+    .lang-name { width: 60px; color: var(--text-2); font-weight: 600; text-transform: uppercase; }
+    .lang-bar-wrap { flex: 1; background: rgba(255,255,255,0.05); border-radius: 4px; height: 6px; overflow: hidden; }
+    .lang-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #a855f7, #3b82f6); transition: width 0.4s; }
+    .lang-cnt { color: var(--text-3); font-size: 11px; min-width: 24px; text-align: right; }
 
     /* ── Links ── */
     .card-links { display: flex; flex-direction: column; gap: 8px; }
@@ -295,6 +300,10 @@
       <div class="chart-wrap">
         <div class="chart-title">Компиляции за 7 дней</div>
         <canvas id="purplec-chart" height="80"></canvas>
+      </div>
+      <div class="chart-wrap" id="purplec-langs-wrap" style="display:none">
+        <div class="chart-title">Топ языков</div>
+        <div id="purplec-langs"></div>
       </div>
       <div class="card-links">
         <a href="https://purplec.up.railway.app" target="_blank" class="link-btn primary">
@@ -482,6 +491,17 @@
       setVal('purplec-admins',       d.admin_count);
       document.getElementById('purplec-uptime').textContent = formatUptime(d.uptime);
       if (d.daily) drawChart('purplec-chart', d.daily, '#a855f7');
+      if (d.top_langs && d.top_langs.length) {
+        const max = d.top_langs[0].cnt;
+        document.getElementById('purplec-langs').innerHTML = d.top_langs.map(l =>
+          `<div class="lang-row">
+            <div class="lang-name">${l.lang}</div>
+            <div class="lang-bar-wrap"><div class="lang-bar" style="width:${Math.round(l.cnt/max*100)}%"></div></div>
+            <div class="lang-cnt">${l.cnt}</div>
+          </div>`
+        ).join('');
+        document.getElementById('purplec-langs-wrap').style.display = '';
+      }
       document.getElementById('total-users').textContent = d.total_users;
       return true;
     } catch {
