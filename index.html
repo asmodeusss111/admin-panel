@@ -386,7 +386,7 @@
       <div id="railway-status" style="font-size:14px;font-weight:700;color:var(--text)">Загрузка...</div>
       <div id="railway-desc" style="font-size:12px;color:var(--text-3);margin-top:2px"></div>
     </div>
-    <a href="https://railwaystatus.com" target="_blank" style="margin-left:auto;font-size:12px;color:var(--text-3);text-decoration:none">railwaystatus.com →</a>
+    <a href="https://status.railway.app" target="_blank" style="margin-left:auto;font-size:12px;color:var(--text-3);text-decoration:none">status.railway.app →</a>
   </div>
 
   <div class="section-title">Общая статистика</div>
@@ -470,17 +470,17 @@
   // ── Railway Status ──
   async function fetchRailwayStatus() {
     try {
-      const r = await fetch('https://railwaystatus.com/api/v1/status.json', { signal: AbortSignal.timeout(6000) });
+      const r = await fetch('https://status.railway.app/summary.json', { signal: AbortSignal.timeout(6000) });
       const d = await r.json();
       const dot = document.getElementById('railway-dot');
       const statusEl = document.getElementById('railway-status');
       const descEl = document.getElementById('railway-desc');
-      const indicator = d.indicator || 'unknown';
-      if (indicator === 'none') {
+      const indicator = d?.page?.status || d?.status?.indicator || 'unknown';
+      if (indicator === 'UP' || indicator === 'none') {
         dot.className = 'railway-indicator ok';
         statusEl.textContent = 'Все системы работают';
         statusEl.style.color = 'var(--green)';
-      } else if (indicator === 'minor') {
+      } else if (indicator === 'HASISSUES' || indicator === 'minor') {
         dot.className = 'railway-indicator warn';
         statusEl.textContent = 'Частичные неполадки';
         statusEl.style.color = 'var(--yellow)';
@@ -489,7 +489,7 @@
         statusEl.textContent = 'Серьёзные проблемы';
         statusEl.style.color = 'var(--red)';
       }
-      descEl.textContent = d.description || '';
+      descEl.textContent = d?.page?.description || d?.status?.description || '';
     } catch {
       document.getElementById('railway-status').textContent = 'Не удалось получить статус';
       document.getElementById('railway-desc').textContent = 'Проверьте вручную на railwaystatus.com';
