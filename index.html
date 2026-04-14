@@ -251,7 +251,11 @@
     <div class="setup-label">Dashboard API Key</div>
     <input class="setup-input" id="apiKeyInput" type="password" placeholder="711d585d...">
     <div class="setup-label">Путь к админке PurpleC</div>
-    <input class="setup-input" id="adminPathInput" type="text" placeholder="/abc123 (из Railway → ADMIN_LOGIN_PATH)" style="margin-bottom:24px">
+    <input class="setup-input" id="adminPathInput" type="text" placeholder="/abc123 (из Railway → ADMIN_LOGIN_PATH)">
+    <div class="setup-label">Telegram Bot Token <span style="font-weight:400;text-transform:none;letter-spacing:0">(необязательно — для уведомлений)</span></div>
+    <input class="setup-input" id="tgTokenInput" type="password" placeholder="123456:ABC-DEF... (от @BotFather)">
+    <div class="setup-label">Telegram Chat ID <span style="font-weight:400;text-transform:none;letter-spacing:0">(от @userinfobot)</span></div>
+    <input class="setup-input" id="tgChatInput" type="text" placeholder="123456789" style="margin-bottom:24px">
     <button class="setup-btn" onclick="saveKey()">Войти</button>
   </div>
 </div>
@@ -465,9 +469,11 @@
 <div class="footer">My Projects Dashboard · <span id="year"></span></div>
 
 <script>
-  const UPASS_URL   = 'https://upass.up.railway.app';
-  const PURPLEC_URL = 'https://purplec.up.railway.app';
-  const KEY_STORE   = 'dashboard_api_key';
+  const UPASS_URL     = 'https://upass.up.railway.app';
+  const PURPLEC_URL   = 'https://purplec.up.railway.app';
+  const KEY_STORE     = 'dashboard_api_key';
+  const TG_TOKEN_STORE = 'tg_bot_token';
+  const TG_CHAT_STORE  = 'tg_chat_id';
   document.getElementById('year').textContent = new Date().getFullYear();
 
   function updateAdminLink() {
@@ -492,6 +498,10 @@
     localStorage.setItem(KEY_STORE, k);
     const p = document.getElementById('adminPathInput').value.trim();
     if (p) localStorage.setItem('purplec_admin_path', p.startsWith('/') ? p : '/' + p);
+    const tgToken = document.getElementById('tgTokenInput').value.trim();
+    const tgChat  = document.getElementById('tgChatInput').value.trim();
+    if (tgToken) localStorage.setItem(TG_TOKEN_STORE, tgToken);
+    if (tgChat)  localStorage.setItem(TG_CHAT_STORE, tgChat);
     document.getElementById('setupOverlay').style.display = 'none';
     updateAdminLink();
     fetchAll();
@@ -501,9 +511,13 @@
     location.reload();
   }
 
-  // Pre-fill saved admin path
+  // Pre-fill saved values
   const _savedPath = localStorage.getItem('purplec_admin_path') || '';
   if (_savedPath) document.getElementById('adminPathInput').value = _savedPath;
+  const _savedTgToken = localStorage.getItem(TG_TOKEN_STORE) || '';
+  const _savedTgChat  = localStorage.getItem(TG_CHAT_STORE)  || '';
+  if (_savedTgToken) document.getElementById('tgTokenInput').value = _savedTgToken;
+  if (_savedTgChat)  document.getElementById('tgChatInput').value  = _savedTgChat;
 
   // Show setup if no key
   if (getKey()) {
@@ -771,11 +785,31 @@
     });
   }
 
+  // ── Telegram notifications ──
+  const _prevStatus = { 'upass-status': null, 'purplec-status': null };
+  const _projectName = { 'upass-status': 'uPass', 'purplec-status': 'PurpleC' };
+
+  async function sendTgAlert(name) {
+    const token = localStorage.getItem(TG_TOKEN_STORE);
+    const chat  = localStorage.getItem(TG_CHAT_STORE);
+    if (!token || !chat) return;
+    const text = `⚠️ ${name} ушёл в офлайн!\n\nПроверь Railway → https://railway.app`;
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chat, text }),
+      });
+    } catch (_) {}
+  }
+
   // ── Status helpers ──
   function setStatus(id, online) {
     const el = document.getElementById(id);
     el.className = 'status ' + (online ? 'online' : 'offline');
     el.innerHTML = `<div class="status-dot"></div> ${online ? 'Онлайн' : 'Офлайн'}`;
+    if (_prevStatus[id] === true && !online) sendTgAlert(_projectName[id]);
+    _prevStatus[id] = online;
   }
 
   function setVal(id, val, warnIf) {
