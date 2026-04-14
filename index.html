@@ -6,6 +6,7 @@
   <title>My Projects Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -142,6 +143,10 @@
     .mini-stat-val.danger { background: none; -webkit-text-fill-color: var(--red); }
     .mini-stat-label { font-size: 11px; color: var(--text-3); font-weight: 500; }
 
+    /* ── Chart ── */
+    .chart-wrap { margin-bottom: 16px; }
+    .chart-title { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+
     /* ── Links ── */
     .card-links { display: flex; flex-direction: column; gap: 8px; }
     .link-btn {
@@ -246,6 +251,10 @@
           <div class="mini-stat-label">Uptime сервера</div>
         </div>
       </div>
+      <div class="chart-wrap">
+        <div class="chart-title">Запросы за 7 дней</div>
+        <canvas id="upass-chart" height="80"></canvas>
+      </div>
       <div class="card-links">
         <a href="https://upass.up.railway.app" target="_blank" class="link-btn primary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -282,6 +291,10 @@
           <div class="mini-stat-val" id="purplec-uptime">—</div>
           <div class="mini-stat-label">Uptime сервера</div>
         </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">Компиляции за 7 дней</div>
+        <canvas id="purplec-chart" height="80"></canvas>
       </div>
       <div class="card-links">
         <a href="https://purplec.up.railway.app" target="_blank" class="link-btn primary">
@@ -386,6 +399,35 @@
     return `${m}м`;
   }
 
+  // ── Charts ──
+  const _charts = {};
+  function drawChart(id, daily, color) {
+    const labels = daily.map(d => d.day.slice(5)); // MM-DD
+    const data   = daily.map(d => d.cnt);
+    if (_charts[id]) _charts[id].destroy();
+    _charts[id] = new Chart(document.getElementById(id), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: color + '33',
+          borderColor:     color,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a6a8a', font: { size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a6a8a', font: { size: 10 }, precision: 0 }, beginAtZero: true }
+        },
+        animation: { duration: 400 },
+      }
+    });
+  }
+
   // ── Status helpers ──
   function setStatus(id, online) {
     const el = document.getElementById(id);
@@ -416,6 +458,7 @@
       setVal('upass-failed',  d.failed_logins_hour, 5);
       setVal('upass-blocked', d.blocked_ips);
       document.getElementById('upass-uptime').textContent = formatUptime(d.uptime);
+      if (d.daily) drawChart('upass-chart', d.daily, '#3b82f6');
       document.getElementById('total-requests').textContent = d.total_requests;
       return true;
     } catch {
@@ -438,6 +481,7 @@
       setVal('purplec-compilations', d.total_compilations);
       setVal('purplec-admins',       d.admin_count);
       document.getElementById('purplec-uptime').textContent = formatUptime(d.uptime);
+      if (d.daily) drawChart('purplec-chart', d.daily, '#a855f7');
       document.getElementById('total-users').textContent = d.total_users;
       return true;
     } catch {
