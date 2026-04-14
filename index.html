@@ -152,6 +152,20 @@
     .notes-btn { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: #fff; border: none; border-radius: 8px; padding: 7px 18px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.18s; }
     .notes-btn:hover { opacity: 0.85; }
 
+    /* ── Terminal ── */
+    .term-wrap { background: #050c23; border: 1px solid rgba(59,130,246,0.2); border-radius: 16px; overflow: hidden; margin-bottom: 32px; }
+    .term-tabs { display: flex; border-bottom: 1px solid rgba(59,130,246,0.15); }
+    .term-tab { flex: 1; padding: 10px; background: none; border: none; color: var(--text-3); font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.18s; letter-spacing: 0.05em; }
+    .term-tab.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+    .term-auth { padding: 24px; max-width: 320px; margin: 0 auto; }
+    .term-auth-title { font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 14px; text-align: center; }
+    .term-output { font-family: 'Courier New', monospace; font-size: 12px; color: #7dd3fc; background: #020810; padding: 16px; min-height: 180px; max-height: 340px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+    .term-input-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid rgba(59,130,246,0.15); }
+    .term-prompt { color: #3b82f6; font-family: monospace; font-weight: 700; }
+    .term-cmd-input { flex: 1; background: none; border: none; color: #e2f0ff; font-family: 'Courier New', monospace; font-size: 13px; outline: none; }
+    .term-logout { background: none; border: 1px solid rgba(239,68,68,0.3); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 11px; font-family: inherit; cursor: pointer; transition: all 0.18s; }
+    .term-logout:hover { background: rgba(239,68,68,0.1); }
+
     /* ── Quick Links ── */
     .quicklinks-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); margin-bottom: 32px; }
     .ql-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
@@ -424,6 +438,35 @@
     </div>
   </div>
 
+  <!-- Terminal -->
+  <div class="section-title" style="margin-top:32px">Терминал</div>
+  <div class="term-wrap">
+    <div class="term-tabs">
+      <button class="term-tab active" onclick="switchTerm('upass')">uPass</button>
+      <button class="term-tab" onclick="switchTerm('purplec')">PurpleC</button>
+    </div>
+
+    <!-- Auth screen -->
+    <div id="term-auth" class="term-auth">
+      <div class="term-auth-title">Авторизация</div>
+      <input id="term-key" class="dl-input" type="password" placeholder="Terminal Key...">
+      <input id="term-totp" class="dl-input" type="text" placeholder="2FA код (6 цифр)" maxlength="6" style="margin-top:8px">
+      <button class="notes-btn" style="margin-top:10px;width:100%" onclick="termAuth()">Войти</button>
+      <div id="term-auth-err" style="font-size:12px;color:var(--red);margin-top:8px;text-align:center"></div>
+    </div>
+
+    <!-- Terminal screen -->
+    <div id="term-console" style="display:none">
+      <div id="term-output" class="term-output"></div>
+      <div class="term-input-row">
+        <span class="term-prompt">$</span>
+        <input id="term-cmd" class="term-cmd-input" type="text" placeholder="memory, stats, db, ps, ls, uptime..." autocomplete="off">
+        <button class="notes-btn" onclick="termExec()">→</button>
+        <button class="term-logout" onclick="termLogout()">Выйти</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Quick Links -->
   <div class="section-title" style="margin-top:32px">Быстрые ссылки</div>
   <div class="quicklinks-wrap">
@@ -492,6 +535,86 @@
   document.getElementById('apiKeyInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveKey();
   });
+
+  // ── Terminal ──
+  let _termProject = 'upass';
+  let _termToken   = { upass: null, purplec: null };
+  const _termBase  = { upass: UPASS_URL, purplec: PURPLEC_URL };
+
+  function switchTerm(proj) {
+    _termProject = proj;
+    document.querySelectorAll('.term-tab').forEach((t, i) => t.classList.toggle('active', i === (proj === 'upass' ? 0 : 1)));
+    _termToken[proj] ? showTermConsole() : showTermAuth();
+  }
+
+  function showTermAuth() {
+    document.getElementById('term-auth').style.display = '';
+    document.getElementById('term-console').style.display = 'none';
+    document.getElementById('term-auth-err').textContent = '';
+  }
+
+  function showTermConsole() {
+    document.getElementById('term-auth').style.display = 'none';
+    document.getElementById('term-console').style.display = '';
+    termPrint(`\x1b[32m✓ Подключено к ${_termProject.toUpperCase()}\x1b[0m\nДоступные команды: memory, stats, db, ps, ls, uptime, env, df, uname`);
+  }
+
+  function termPrint(text) {
+    const out = document.getElementById('term-output');
+    const line = document.createElement('div');
+    line.style.borderBottom = '1px solid rgba(59,130,246,0.06)';
+    line.style.padding = '4px 0';
+    line.textContent = text;
+    out.appendChild(line);
+    out.scrollTop = out.scrollHeight;
+  }
+
+  async function termAuth() {
+    const key  = document.getElementById('term-key').value.trim();
+    const code = document.getElementById('term-totp').value.trim();
+    const errEl = document.getElementById('term-auth-err');
+    errEl.textContent = 'Проверка...';
+    try {
+      const r = await fetch(`${_termBase[_termProject]}/api/terminal/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, code }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const d = await r.json();
+      if (!r.ok) { errEl.textContent = d.error || d.detail || 'Ошибка'; return; }
+      _termToken[_termProject] = d.token;
+      document.getElementById('term-output').innerHTML = '';
+      showTermConsole();
+    } catch (e) {
+      errEl.textContent = 'Сетевая ошибка';
+    }
+  }
+
+  async function termExec() {
+    const input = document.getElementById('term-cmd');
+    const cmd = input.value.trim();
+    if (!cmd) return;
+    termPrint(`$ ${cmd}`);
+    input.value = '';
+    try {
+      const r = await fetch(`${_termBase[_termProject]}/api/terminal/exec`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Terminal-Token': _termToken[_termProject] },
+        body: JSON.stringify({ cmd }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const d = await r.json();
+      if (r.status === 401) { _termToken[_termProject] = null; showTermAuth(); return; }
+      termPrint(d.output || d.error || '(нет ответа)');
+    } catch { termPrint('Ошибка сети'); }
+  }
+
+  function termLogout() { _termToken[_termProject] = null; showTermAuth(); }
+
+  document.getElementById('term-cmd').addEventListener('keydown', e => { if (e.key === 'Enter') termExec(); });
+  document.getElementById('term-totp').addEventListener('keydown', e => { if (e.key === 'Enter') termAuth(); });
+  showTermAuth();
 
   // ── Quick Links ──
   const QL_DEFAULT = [
