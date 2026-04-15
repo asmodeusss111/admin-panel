@@ -58,6 +58,54 @@
     }
     .setup-btn:hover { opacity: 0.88; }
 
+    /* ── Welcome animation overlay ── */
+    #welcomeOverlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: #020817;
+      display: none; align-items: center; justify-content: center; flex-direction: column;
+    }
+    #welcomeOverlay.active { display: flex; }
+
+    .wlc-ball {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      box-shadow: 0 0 24px rgba(59,130,246,0.7);
+      margin-bottom: 48px;
+      animation: ballBounce 0.55s cubic-bezier(0.36,0.07,0.19,0.97) infinite alternate;
+    }
+    @keyframes ballBounce {
+      0%   { transform: translateY(-30px) scale(1.1, 0.9); }
+      100% { transform: translateY(30px)  scale(0.9, 1.1); }
+    }
+    .wlc-ball.done { animation: ballFadeOut 0.4s ease forwards; }
+    @keyframes ballFadeOut {
+      to { opacity: 0; transform: scale(0); }
+    }
+
+    .wlc-text {
+      font-size: 26px; font-weight: 800; letter-spacing: 0.02em;
+      color: transparent;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4, #a78bfa);
+      -webkit-background-clip: text; background-clip: text;
+      min-height: 40px; text-align: center;
+    }
+    .wlc-char {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .wlc-char.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .wlc-glow {
+      margin-top: 16px; font-size: 13px; color: rgba(59,130,246,0.5);
+      opacity: 0; transition: opacity 0.5s ease;
+      letter-spacing: 0.15em; text-transform: uppercase;
+    }
+    .wlc-glow.show { opacity: 1; }
+
     /* ── Header ── */
     .header {
       padding: 24px 40px; display: flex; align-items: center; justify-content: space-between;
@@ -292,6 +340,13 @@
     <input class="setup-input" id="tgChatInput" type="text" placeholder="123456789" style="margin-bottom:24px">
     <button class="setup-btn" onclick="saveKey()">Войти</button>
   </div>
+</div>
+
+<!-- Welcome animation -->
+<div id="welcomeOverlay">
+  <div class="wlc-ball" id="wlcBall"></div>
+  <div class="wlc-text" id="wlcText"></div>
+  <div class="wlc-glow" id="wlcGlow">dashboard</div>
 </div>
 
 <!-- Header -->
@@ -605,6 +660,52 @@
 
   // ── API Key ──
   function getKey() { return localStorage.getItem(KEY_STORE) || ''; }
+
+  async function playWelcome(cb) {
+    const overlay = document.getElementById('welcomeOverlay');
+    const ball    = document.getElementById('wlcBall');
+    const textEl  = document.getElementById('wlcText');
+    const glow    = document.getElementById('wlcGlow');
+    const msg     = 'Добро пожаловать, asmodeusss111';
+
+    overlay.classList.add('active');
+    textEl.innerHTML = '';
+    glow.classList.remove('show');
+
+    // bounce for 1.2s
+    await new Promise(r => setTimeout(r, 1200));
+
+    // stop ball
+    ball.classList.add('done');
+    await new Promise(r => setTimeout(r, 350));
+
+    // type out letters
+    for (const ch of msg) {
+      const span = document.createElement('span');
+      span.className = 'wlc-char';
+      span.textContent = ch === ' ' ? '\u00A0' : ch;
+      textEl.appendChild(span);
+      requestAnimationFrame(() => requestAnimationFrame(() => span.classList.add('show')));
+      await new Promise(r => setTimeout(r, ch === ',' ? 120 : 55));
+    }
+
+    // show subtitle
+    await new Promise(r => setTimeout(r, 200));
+    glow.classList.add('show');
+    await new Promise(r => setTimeout(r, 800));
+
+    // fade out overlay
+    overlay.style.transition = 'opacity 0.4s ease';
+    overlay.style.opacity = '0';
+    await new Promise(r => setTimeout(r, 400));
+    overlay.classList.remove('active');
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+    ball.classList.remove('done');
+
+    cb && cb();
+  }
+
   function saveKey() {
     const k = document.getElementById('apiKeyInput').value.trim();
     if (!k) return;
@@ -617,7 +718,7 @@
     if (tgChat)  localStorage.setItem(TG_CHAT_STORE, tgChat);
     document.getElementById('setupOverlay').style.display = 'none';
     updateAdminLink();
-    fetchAll();
+    playWelcome(() => fetchAll());
   }
   function resetKey() {
     localStorage.removeItem(KEY_STORE);
