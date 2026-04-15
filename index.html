@@ -63,48 +63,82 @@
       position: fixed; inset: 0; z-index: 200;
       background: #020817;
       display: none; align-items: center; justify-content: center; flex-direction: column;
+      gap: 0; overflow: hidden;
     }
     #welcomeOverlay.active { display: flex; }
 
-    .wlc-ball {
-      width: 22px; height: 22px; border-radius: 50%;
-      background: linear-gradient(135deg, #3b82f6, #06b6d4);
-      box-shadow: 0 0 24px rgba(59,130,246,0.7);
-      margin-bottom: 48px;
-      animation: ballBounce 0.55s cubic-bezier(0.36,0.07,0.19,0.97) infinite alternate;
+    /* particles */
+    .wlc-particle {
+      position: absolute; border-radius: 50%;
+      pointer-events: none;
+      animation: particleFloat linear forwards;
     }
-    @keyframes ballBounce {
-      0%   { transform: translateY(-30px) scale(1.1, 0.9); }
-      100% { transform: translateY(30px)  scale(0.9, 1.1); }
-    }
-    .wlc-ball.done { animation: ballFadeOut 0.4s ease forwards; }
-    @keyframes ballFadeOut {
-      to { opacity: 0; transform: scale(0); }
+    @keyframes particleFloat {
+      0%   { opacity: 0; transform: translateY(0) scale(0); }
+      15%  { opacity: 1; transform: translateY(-20px) scale(1); }
+      100% { opacity: 0; transform: translateY(-180px) scale(0.4); }
     }
 
+    /* emoji wave */
+    .wlc-emoji {
+      font-size: 56px; margin-bottom: 18px;
+      opacity: 0; transform: scale(0.4) rotate(-20deg);
+      transition: opacity 0.45s cubic-bezier(0.34,1.56,0.64,1),
+                  transform 0.45s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .wlc-emoji.show { opacity: 1; transform: scale(1) rotate(0deg); }
+    .wlc-emoji.wave { animation: emojiWave 0.6s ease; }
+    @keyframes emojiWave {
+      0%,100% { transform: scale(1) rotate(0deg); }
+      25%     { transform: scale(1.15) rotate(15deg); }
+      75%     { transform: scale(1.1) rotate(-10deg); }
+    }
+
+    /* main text */
     .wlc-text {
-      font-size: 26px; font-weight: 800; letter-spacing: 0.02em;
-      min-height: 40px; text-align: center;
+      font-size: 42px; font-weight: 900; letter-spacing: -0.01em;
+      min-height: 56px; text-align: center; line-height: 1.1;
     }
     .wlc-char {
-      display: inline-block;
-      opacity: 0;
-      transform: translateY(16px);
-      transition: opacity 0.18s ease, transform 0.18s ease;
+      display: inline-block; opacity: 0;
+      transform: translateY(24px) scale(0.85);
+      transition: opacity 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                  transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
       color: transparent;
-      background: linear-gradient(135deg, #3b82f6, #06b6d4, #a78bfa);
+      background: linear-gradient(135deg, #60a5fa, #06b6d4, #a78bfa);
       -webkit-background-clip: text; background-clip: text;
     }
-    .wlc-char.show {
-      opacity: 1;
-      transform: translateY(0);
+    .wlc-char.show { opacity: 1; transform: translateY(0) scale(1); }
+
+    /* username highlighted differently */
+    .wlc-char.name {
+      background: linear-gradient(135deg, #06b6d4, #a78bfa, #f472b6);
+      -webkit-background-clip: text; background-clip: text;
     }
-    .wlc-glow {
-      margin-top: 16px; font-size: 13px; color: rgba(59,130,246,0.5);
-      opacity: 0; transition: opacity 0.5s ease;
-      letter-spacing: 0.15em; text-transform: uppercase;
+
+    /* subtitle */
+    .wlc-sub {
+      margin-top: 20px; font-size: 12px; font-weight: 600;
+      color: rgba(99,179,237,0.45); letter-spacing: 0.22em; text-transform: uppercase;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
     }
-    .wlc-glow.show { opacity: 1; }
+    .wlc-sub.show { opacity: 1; transform: translateY(0); }
+
+    /* pulse ring behind emoji */
+    .wlc-ring {
+      position: absolute; width: 120px; height: 120px; border-radius: 50%;
+      border: 2px solid rgba(59,130,246,0.3);
+      opacity: 0;
+      animation: none;
+    }
+    .wlc-ring.pulse {
+      animation: ringPulse 1.2s ease-out infinite;
+    }
+    @keyframes ringPulse {
+      0%   { opacity: 0.6; transform: scale(0.8); }
+      100% { opacity: 0;   transform: scale(2.2); }
+    }
 
     /* ── Header ── */
     .header {
@@ -344,9 +378,10 @@
 
 <!-- Welcome animation -->
 <div id="welcomeOverlay">
-  <div class="wlc-ball" id="wlcBall"></div>
+  <div class="wlc-ring" id="wlcRing"></div>
+  <div class="wlc-emoji" id="wlcEmoji">👋</div>
   <div class="wlc-text" id="wlcText"></div>
-  <div class="wlc-glow" id="wlcGlow">dashboard</div>
+  <div class="wlc-sub" id="wlcSub">My Projects Dashboard</div>
 </div>
 
 <!-- Header -->
@@ -661,47 +696,96 @@
   // ── API Key ──
   function getKey() { return localStorage.getItem(KEY_STORE) || ''; }
 
+  function spawnParticles(overlay) {
+    const colors = ['#3b82f6','#06b6d4','#a78bfa','#f472b6','#60a5fa'];
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'wlc-particle';
+      const size = 4 + Math.random() * 7;
+      p.style.cssText = [
+        `width:${size}px`, `height:${size}px`,
+        `left:${10 + Math.random() * 80}%`,
+        `bottom:${5 + Math.random() * 40}%`,
+        `background:${colors[Math.floor(Math.random()*colors.length)]}`,
+        `box-shadow:0 0 6px ${colors[Math.floor(Math.random()*colors.length)]}`,
+        `animation-duration:${1.2 + Math.random() * 1.4}s`,
+        `animation-delay:${Math.random() * 0.8}s`,
+      ].join(';');
+      overlay.appendChild(p);
+      setTimeout(() => p.remove(), 3000);
+    }
+  }
+
   async function playWelcome(cb) {
     const overlay = document.getElementById('welcomeOverlay');
-    const ball    = document.getElementById('wlcBall');
+    const emoji   = document.getElementById('wlcEmoji');
+    const ring    = document.getElementById('wlcRing');
     const textEl  = document.getElementById('wlcText');
-    const glow    = document.getElementById('wlcGlow');
-    const msg     = 'Добро пожаловать, asmodeusss111';
+    const sub     = document.getElementById('wlcSub');
+    const greeting = 'Добро пожаловать, ';
+    const username  = 'asmodeusss111';
 
-    overlay.classList.add('active');
+    // reset
     textEl.innerHTML = '';
-    glow.classList.remove('show');
+    emoji.classList.remove('show','wave');
+    sub.classList.remove('show');
+    ring.classList.remove('pulse');
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+    overlay.classList.add('active');
 
-    // bounce for 1.2s
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 80));
 
-    // stop ball
-    ball.classList.add('done');
-    await new Promise(r => setTimeout(r, 350));
+    // ring pulse + emoji pop in
+    ring.classList.add('pulse');
+    emoji.classList.add('show');
+    spawnParticles(overlay);
+    await new Promise(r => setTimeout(r, 500));
 
-    // type out letters
-    for (const ch of msg) {
+    // wave emoji
+    emoji.classList.add('wave');
+    await new Promise(r => setTimeout(r, 650));
+    emoji.classList.remove('wave');
+    await new Promise(r => setTimeout(r, 200));
+
+    // type greeting
+    for (const ch of greeting) {
       const span = document.createElement('span');
       span.className = 'wlc-char';
       span.textContent = ch === ' ' ? '\u00A0' : ch;
       textEl.appendChild(span);
+      await new Promise(r => setTimeout(r, 1));
       requestAnimationFrame(() => requestAnimationFrame(() => span.classList.add('show')));
-      await new Promise(r => setTimeout(r, ch === ',' ? 120 : 55));
+      await new Promise(r => setTimeout(r, ch === ',' ? 140 : 48));
     }
 
-    // show subtitle
-    await new Promise(r => setTimeout(r, 200));
-    glow.classList.add('show');
-    await new Promise(r => setTimeout(r, 800));
+    // type username (different color)
+    for (const ch of username) {
+      const span = document.createElement('span');
+      span.className = 'wlc-char name';
+      span.textContent = ch;
+      textEl.appendChild(span);
+      await new Promise(r => setTimeout(r, 1));
+      requestAnimationFrame(() => requestAnimationFrame(() => span.classList.add('show')));
+      await new Promise(r => setTimeout(r, 52));
+    }
 
-    // fade out overlay
-    overlay.style.transition = 'opacity 0.4s ease';
+    // burst particles again after name
+    spawnParticles(overlay);
+    await new Promise(r => setTimeout(r, 300));
+
+    // show subtitle
+    sub.classList.add('show');
+    await new Promise(r => setTimeout(r, 1000));
+
+    // fade out
+    overlay.style.transition = 'opacity 0.5s ease';
     overlay.style.opacity = '0';
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 500));
     overlay.classList.remove('active');
     overlay.style.opacity = '';
     overlay.style.transition = '';
-    ball.classList.remove('done');
+    ring.classList.remove('pulse');
 
     cb && cb();
   }
