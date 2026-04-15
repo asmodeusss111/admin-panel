@@ -465,8 +465,24 @@
         <div class="card-name">Mini Burp</div>
         <div class="status loading" id="miniburp-status"><div class="status-dot"></div> Загрузка...</div>
       </div>
-      <div class="card-stack">Node.js · React · Vite · Railway</div>
+      <div class="card-stack">Node.js · React · Vite · SQLite · Railway</div>
       <div class="card-stats">
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="miniburp-proxy">—</div>
+          <div class="mini-stat-label">Прокси запросов</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="miniburp-scans">—</div>
+          <div class="mini-stat-label">Сканов портов</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="miniburp-fuzz">—</div>
+          <div class="mini-stat-label">Фаззинг запусков</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="miniburp-blocked">—</div>
+          <div class="mini-stat-label">Заблокировано SSRF</div>
+        </div>
         <div class="mini-stat" style="grid-column: span 2">
           <div class="mini-stat-val" id="miniburp-uptime">—</div>
           <div class="mini-stat-label">Uptime сервера</div>
@@ -1265,14 +1281,16 @@
   // ── Fetch Mini Burp ──
   async function fetchMiniBurp() {
     try {
-      const r = await fetch(`${MINIBURP_URL}/health`, {
-        signal: AbortSignal.timeout(8000),
-      });
+      const r = await fetch(`${MINIBURP_URL}/health`, { signal: AbortSignal.timeout(8000) });
       if (!r.ok) { setStatus('miniburp-status', false); return false; }
       const d = await r.json();
       if (!d.ok) { setStatus('miniburp-status', false); return false; }
       setStatus('miniburp-status', true);
-      document.getElementById('miniburp-uptime').textContent = 'OK';
+      document.getElementById('miniburp-uptime').textContent = formatUptime(d.uptime);
+      document.getElementById('miniburp-proxy').textContent   = d.stats?.proxy_hits   ?? 0;
+      document.getElementById('miniburp-scans').textContent   = d.stats?.scan_hits    ?? 0;
+      document.getElementById('miniburp-fuzz').textContent    = d.stats?.fuzz_hits    ?? 0;
+      document.getElementById('miniburp-blocked').textContent = d.stats?.blocked_ssrf ?? 0;
       return true;
     } catch {
       setStatus('miniburp-status', false);
