@@ -418,6 +418,27 @@
       </div>
     </div>
 
+    <!-- Mini Burp -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-name">Mini Burp</div>
+        <div class="status loading" id="miniburp-status"><div class="status-dot"></div> Загрузка...</div>
+      </div>
+      <div class="card-stack">Node.js · React · Vite · Railway</div>
+      <div class="card-stats">
+        <div class="mini-stat" style="grid-column: span 2">
+          <div class="mini-stat-val" id="miniburp-uptime">—</div>
+          <div class="mini-stat-label">Uptime сервера</div>
+        </div>
+      </div>
+      <div class="card-links">
+        <a href="https://mini-burp.up.railway.app" target="_blank" class="link-btn primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Открыть сканер
+        </a>
+      </div>
+    </div>
+
     <!-- PurpleC -->
     <div class="card">
       <div class="card-header">
@@ -635,6 +656,7 @@
 <script>
   const UPASS_URL     = 'https://upass.up.railway.app';
   const PURPLEC_URL   = 'https://purplec.up.railway.app';
+  const MINIBURP_URL  = 'https://mini-burp.up.railway.app';
   const KEY_STORE     = 'dashboard_api_key';
   const TG_TOKEN_STORE = 'tg_bot_token';
   const TG_CHAT_STORE  = 'tg_chat_id';
@@ -1145,8 +1167,8 @@
   }
 
   // ── Telegram notifications ──
-  const _prevStatus = { 'upass-status': null, 'purplec-status': null };
-  const _projectName = { 'upass-status': 'uPass', 'purplec-status': 'PurpleC' };
+  const _prevStatus = { 'upass-status': null, 'purplec-status': null, 'miniburp-status': null };
+  const _projectName = { 'upass-status': 'uPass', 'purplec-status': 'PurpleC', 'miniburp-status': 'Mini Burp' };
 
   async function sendTgAlert(name) {
     const token = localStorage.getItem(TG_TOKEN_STORE);
@@ -1240,9 +1262,27 @@
     }
   }
 
+  // ── Fetch Mini Burp ──
+  async function fetchMiniBurp() {
+    try {
+      const r = await fetch(`${MINIBURP_URL}/health`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) { setStatus('miniburp-status', false); return false; }
+      const d = await r.json();
+      if (!d.ok) { setStatus('miniburp-status', false); return false; }
+      setStatus('miniburp-status', true);
+      document.getElementById('miniburp-uptime').textContent = 'OK';
+      return true;
+    } catch {
+      setStatus('miniburp-status', false);
+      return false;
+    }
+  }
+
   // ── Fetch all ──
   async function fetchAll() {
-    const results = await Promise.all([fetchUPass(), fetchPurpleC()]);
+    const results = await Promise.all([fetchUPass(), fetchPurpleC(), fetchMiniBurp()]);
     document.getElementById('online-count').textContent = results.filter(Boolean).length;
     document.getElementById('lastUpdated').textContent =
       'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
