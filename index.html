@@ -84,9 +84,6 @@
 
     .wlc-text {
       font-size: 26px; font-weight: 800; letter-spacing: 0.02em;
-      color: transparent;
-      background: linear-gradient(135deg, #3b82f6, #06b6d4, #a78bfa);
-      -webkit-background-clip: text; background-clip: text;
       min-height: 40px; text-align: center;
     }
     .wlc-char {
@@ -94,6 +91,9 @@
       opacity: 0;
       transform: translateY(16px);
       transition: opacity 0.18s ease, transform 0.18s ease;
+      color: transparent;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4, #a78bfa);
+      -webkit-background-clip: text; background-clip: text;
     }
     .wlc-char.show {
       opacity: 1;
