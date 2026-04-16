@@ -283,6 +283,24 @@
     .lang-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #a855f7, #3b82f6); transition: width 0.4s; }
     .lang-cnt { color: var(--text-3); font-size: 11px; min-width: 24px; text-align: right; }
 
+    /* ── Service status ── */
+    .svc-grid { display: flex; flex-direction: column; gap: 10px; }
+    .svc-row {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 16px;
+    }
+    .svc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: var(--text-3); }
+    .svc-dot.online  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .svc-dot.offline { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+    .svc-name { font-weight: 700; font-size: 13px; min-width: 90px; }
+    .svc-url  { font-size: 11px; color: var(--text-3); flex: 1; }
+    .svc-ping { font-size: 12px; font-weight: 600; min-width: 60px; text-align: right; }
+    .svc-ping.fast { color: var(--green); }
+    .svc-ping.slow { color: var(--yellow); }
+    .svc-ping.down { color: var(--red); }
+    .svc-checked { font-size: 11px; color: var(--text-3); min-width: 70px; text-align: right; }
+
     /* ── Links ── */
     .card-links { display: flex; flex-direction: column; gap: 8px; }
     .link-btn {
@@ -447,6 +465,10 @@
         <div class="chart-title">Компиляции за 7 дней</div>
         <canvas id="purplec-chart" height="80"></canvas>
       </div>
+      <div class="chart-wrap" id="purplec-langs-wrap" style="display:none">
+        <div class="chart-title">Топ языков</div>
+        <div id="purplec-langs"></div>
+      </div>
       <div class="card-links">
         <a href="https://purplec.up.railway.app" target="_blank" class="link-btn primary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -496,6 +518,32 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Service Status -->
+  <div class="section-title" style="margin-top:32px">Статус сервисов</div>
+  <div class="svc-grid">
+    <div class="svc-row" id="svc-upass">
+      <div class="svc-dot" id="svc-upass-dot"></div>
+      <div class="svc-name">uPass</div>
+      <div class="svc-url">upass.up.railway.app</div>
+      <div class="svc-ping" id="svc-upass-ping">—</div>
+      <div class="svc-checked" id="svc-upass-checked">—</div>
+    </div>
+    <div class="svc-row" id="svc-purplec">
+      <div class="svc-dot" id="svc-purplec-dot"></div>
+      <div class="svc-name">PurpleC</div>
+      <div class="svc-url">purplec.up.railway.app</div>
+      <div class="svc-ping" id="svc-purplec-ping">—</div>
+      <div class="svc-checked" id="svc-purplec-checked">—</div>
+    </div>
+    <div class="svc-row" id="svc-miniburp">
+      <div class="svc-dot" id="svc-miniburp-dot"></div>
+      <div class="svc-name">Mini Burp</div>
+      <div class="svc-url">mini-burp.up.railway.app</div>
+      <div class="svc-ping" id="svc-miniburp-ping">—</div>
+      <div class="svc-checked" id="svc-miniburp-checked">—</div>
+    </div>
   </div>
 
   <!-- Notes -->
@@ -1219,14 +1267,17 @@
 
   // ── Fetch uPass ──
   async function fetchUPass() {
+    const t0 = Date.now();
     try {
       const r = await fetch(`${UPASS_URL}/api/dashboard/stats`, {
         headers: { 'X-Dashboard-Key': getKey() },
         signal: AbortSignal.timeout(8000),
       });
-      if (!r.ok) { setStatus('upass-status', false); return; }
+      const ms = Date.now() - t0;
+      if (!r.ok) { setStatus('upass-status', false); updateSvcStatus('upass', false, null); return; }
       const d = await r.json();
       setStatus('upass-status', true);
+      updateSvcStatus('upass', true, ms);
       _lastUPass = d;
       setVal('upass-total',   d.total_requests);
       setVal('upass-det',     d.deterministic);
@@ -1249,20 +1300,39 @@
       return true;
     } catch {
       setStatus('upass-status', false);
+      updateSvcStatus('upass', false, null);
       return false;
     }
   }
 
   // ── Fetch PurpleC ──
+  function updateSvcStatus(id, online, ms) {
+    const dot     = document.getElementById(`svc-${id}-dot`);
+    const ping    = document.getElementById(`svc-${id}-ping`);
+    const checked = document.getElementById(`svc-${id}-checked`);
+    dot.className = 'svc-dot ' + (online ? 'online' : 'offline');
+    if (online && ms !== null) {
+      ping.textContent = ms + ' мс';
+      ping.className   = 'svc-ping ' + (ms < 400 ? 'fast' : 'slow');
+    } else {
+      ping.textContent = 'Офлайн';
+      ping.className   = 'svc-ping down';
+    }
+    checked.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
   async function fetchPurpleC() {
+    const t0 = Date.now();
     try {
       const r = await fetch(`${PURPLEC_URL}/api/dashboard/stats`, {
         headers: { 'X-Dashboard-Key': getKey() },
         signal: AbortSignal.timeout(8000),
       });
-      if (!r.ok) { setStatus('purplec-status', false); return; }
+      const ms = Date.now() - t0;
+      if (!r.ok) { setStatus('purplec-status', false); updateSvcStatus('purplec', false, null); return; }
       const d = await r.json();
       setStatus('purplec-status', true);
+      updateSvcStatus('purplec', true, ms);
       _lastPurpleC = d;
       setVal('purplec-users',        d.total_users);
       setVal('purplec-compilations', d.total_compilations);
@@ -1271,21 +1341,38 @@
       if (d.daily) drawChart('purplec-chart', d.daily, '#a855f7');
       document.getElementById('total-users').textContent = d.total_users;
       if (d.snippet_lines !== undefined) document.getElementById('total-lines').textContent = d.snippet_lines.toLocaleString('ru-RU');
+      // Top langs
+      if (d.top_langs && d.top_langs.length) {
+        const wrap = document.getElementById('purplec-langs-wrap');
+        const container = document.getElementById('purplec-langs');
+        const max = d.top_langs[0].cnt || 1;
+        container.innerHTML = d.top_langs.map(l => `
+          <div class="lang-row">
+            <div class="lang-name">${l.lang}</div>
+            <div class="lang-bar-wrap"><div class="lang-bar" style="width:${Math.round(l.cnt/max*100)}%"></div></div>
+            <div class="lang-cnt">${l.cnt}</div>
+          </div>`).join('');
+        wrap.style.display = '';
+      }
       return true;
     } catch {
       setStatus('purplec-status', false);
+      updateSvcStatus('purplec', false, null);
       return false;
     }
   }
 
   // ── Fetch Mini Burp ──
   async function fetchMiniBurp() {
+    const t0 = Date.now();
     try {
       const r = await fetch(`${MINIBURP_URL}/health`, { signal: AbortSignal.timeout(8000) });
-      if (!r.ok) { setStatus('miniburp-status', false); return false; }
+      const ms = Date.now() - t0;
+      if (!r.ok) { setStatus('miniburp-status', false); updateSvcStatus('miniburp', false, null); return false; }
       const d = await r.json();
-      if (!d.ok) { setStatus('miniburp-status', false); return false; }
+      if (!d.ok) { setStatus('miniburp-status', false); updateSvcStatus('miniburp', false, null); return false; }
       setStatus('miniburp-status', true);
+      updateSvcStatus('miniburp', true, ms);
       document.getElementById('miniburp-uptime').textContent = formatUptime(d.uptime);
       document.getElementById('miniburp-proxy').textContent   = d.stats?.proxy_hits   ?? 0;
       document.getElementById('miniburp-scans').textContent   = d.stats?.scan_hits    ?? 0;
@@ -1294,6 +1381,7 @@
       return true;
     } catch {
       setStatus('miniburp-status', false);
+      updateSvcStatus('miniburp', false, null);
       return false;
     }
   }
