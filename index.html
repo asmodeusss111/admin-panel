@@ -336,6 +336,48 @@
 
     .footer { text-align: center; padding: 32px; color: var(--text-3); font-size: 12px; }
     .last-updated { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 16px; }
+
+    /* ── CRM widgets ── */
+    .crm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .crm-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; backdrop-filter: blur(16px);
+      position: relative; overflow: hidden;
+    }
+    .crm-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .crm-card.c-blue::before   { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+    .crm-card.c-green::before  { background: linear-gradient(135deg, #10b981, #06b6d4); }
+    .crm-card.c-yellow::before { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    .crm-card.c-purple::before { background: linear-gradient(135deg, #a855f7, #3b82f6); }
+    .crm-val {
+      font-size: 28px; font-weight: 900; letter-spacing: -.03em; margin-bottom: 4px;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .crm-val.green  { background: linear-gradient(135deg, #10b981, #06b6d4); -webkit-background-clip: text; }
+    .crm-val.yellow { background: none; -webkit-text-fill-color: var(--yellow); }
+    .crm-val.purple { background: linear-gradient(135deg, #a855f7, #3b82f6); -webkit-background-clip: text; }
+    .crm-label { font-size: 11px; color: var(--text-3); font-weight: 500; }
+    .crm-sub { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+
+    .crm-deadlines { display: flex; flex-direction: column; gap: 6px; }
+    .crm-dl-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      background: rgba(5,12,35,.6); border: 1px solid rgba(59,130,246,.1); border-radius: 8px; }
+    .crm-dl-name { flex: 1; font-size: 13px; color: var(--text); }
+    .crm-dl-client { font-size: 11px; color: var(--text-3); }
+    .crm-dl-days { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+    .crm-dl-days.ok   { background: rgba(16,185,129,.15); color: var(--green); }
+    .crm-dl-days.warn { background: rgba(245,158,11,.15);  color: var(--yellow); }
+    .crm-dl-days.over { background: rgba(239,68,68,.15);   color: var(--red); }
+    .crm-nav-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .crm-nav-btn {
+      display: flex; align-items: center; gap: 7px; padding: 8px 16px;
+      background: rgba(59,130,246,.08); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-2); font-size: 13px; font-weight: 600;
+      text-decoration: none; transition: all .18s;
+    }
+    .crm-nav-btn:hover { background: rgba(59,130,246,.18); border-color: var(--border-h); color: var(--text); }
+    @media(max-width:700px) { .crm-grid { grid-template-columns: 1fr 1fr; } }
   </style>
 </head>
 <body>
@@ -383,6 +425,39 @@
 </div>
 
 <div class="main">
+
+  <!-- CRM Section -->
+  <div class="section-title">CRM — Заказы</div>
+  <div class="crm-nav-row">
+    <a class="crm-nav-btn" href="projects.html">📁 Проекты</a>
+    <a class="crm-nav-btn" href="orders.html">💼 Заказы</a>
+  </div>
+  <div class="crm-grid" id="crmGrid">
+    <div class="crm-card c-blue">
+      <div class="crm-val" id="crm-active">—</div>
+      <div class="crm-label">Активных заказов</div>
+      <div class="crm-sub" id="crm-active-sub"></div>
+    </div>
+    <div class="crm-card c-green">
+      <div class="crm-val green" id="crm-revenue">—</div>
+      <div class="crm-label">Доход за месяц</div>
+      <div class="crm-sub" id="crm-revenue-sub"></div>
+    </div>
+    <div class="crm-card c-yellow">
+      <div class="crm-val yellow" id="crm-done-pct">—</div>
+      <div class="crm-label">Выполнено заказов</div>
+      <div class="crm-sub" id="crm-done-sub"></div>
+    </div>
+    <div class="crm-card c-purple">
+      <div class="crm-val purple" id="crm-projects">—</div>
+      <div class="crm-label">Проектов</div>
+      <div class="crm-sub" id="crm-projects-sub"></div>
+    </div>
+  </div>
+  <div id="crm-deadlines-wrap" style="display:none;margin-bottom:32px">
+    <div class="section-title">Ближайшие дедлайны</div>
+    <div class="crm-deadlines" id="crmDeadlines"></div>
+  </div>
 
   <div class="section-title">Проекты</div>
   <div class="projects">
@@ -1395,6 +1470,73 @@
   }
 
   setInterval(fetchAll, 30000);
+</script>
+<script src="js/github-api.js"></script>
+<script>
+// ── CRM widgets from GitHub storage ──────────────────────────────────────────
+async function loadCRM() {
+  if (!isConfigured()) return;
+  try {
+    const d = await getStorage().load();
+    const orders   = d.orders   || [];
+    const projects = d.projects || [];
+
+    // active orders (in_progress + new)
+    const active = orders.filter(o => o.status === 'new' || o.status === 'in_progress');
+    document.getElementById('crm-active').textContent = active.length;
+    document.getElementById('crm-active-sub').textContent = `всего ${orders.length} заказ${orders.length===1?'':'ов'}`;
+
+    // monthly revenue (paid orders this month)
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthOrders = orders.filter(o => o.paid && o.createdAt >= monthStart);
+    const byCurrency = {};
+    monthOrders.forEach(o => {
+      const c = o.currency || 'USD';
+      byCurrency[c] = (byCurrency[c] || 0) + (o.price || 0);
+    });
+    const revParts = Object.entries(byCurrency).map(([c, v]) => `${Number(v).toLocaleString('ru')} ${c}`);
+    document.getElementById('crm-revenue').textContent = revParts.length ? revParts[0] : '0';
+    if (revParts.length > 1) document.getElementById('crm-revenue-sub').textContent = revParts.slice(1).join(' + ');
+    else document.getElementById('crm-revenue-sub').textContent = monthOrders.length + ' оплачено';
+
+    // % done
+    const done = orders.filter(o => o.status === 'done').length;
+    const pct  = orders.length ? Math.round(done / orders.length * 100) : 0;
+    document.getElementById('crm-done-pct').textContent = pct + '%';
+    document.getElementById('crm-done-sub').textContent = `${done} из ${orders.length}`;
+
+    // projects count
+    const activeProj = projects.filter(p => p.status === 'active').length;
+    document.getElementById('crm-projects').textContent = projects.length;
+    document.getElementById('crm-projects-sub').textContent = `${activeProj} в работе`;
+
+    // upcoming deadlines (next 14 days, not cancelled)
+    const today = new Date(); today.setHours(0,0,0,0);
+    const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() + 14);
+    const upcoming = orders
+      .filter(o => o.deadline && o.status !== 'cancelled' && o.status !== 'done')
+      .map(o => ({ ...o, _days: Math.ceil((new Date(o.deadline).setHours(0,0,0,0) - today.getTime()) / 86400000) }))
+      .filter(o => o._days <= 14)
+      .sort((a, b) => a._days - b._days)
+      .slice(0, 5);
+
+    if (upcoming.length) {
+      document.getElementById('crm-deadlines-wrap').style.display = '';
+      document.getElementById('crmDeadlines').innerHTML = upcoming.map(o => {
+        const cls = o._days < 0 ? 'over' : o._days <= 3 ? 'warn' : 'ok';
+        const lbl = o._days < 0 ? `просрочен ${-o._days}д` : o._days === 0 ? 'Сегодня!' : `${o._days} дн.`;
+        return `<div class="crm-dl-item">
+          <div class="crm-dl-name">${o.name.replace(/</g,'&lt;')}</div>
+          ${o.client ? `<div class="crm-dl-client">${o.client.replace(/</g,'&lt;')}</div>` : ''}
+          <span class="crm-dl-days ${cls}">${lbl}</span>
+        </div>`;
+      }).join('');
+    }
+  } catch(_) {}
+}
+
+loadCRM();
 </script>
 </body>
 </html>
